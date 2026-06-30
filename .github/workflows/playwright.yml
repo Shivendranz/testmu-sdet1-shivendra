@@ -1,3 +1,17 @@
+- name: Install dependencies
+        run: npm ci
+
+      # Yeh step add/update karein (ensure browsers are installed)
+      - name: Install Playwright browsers
+        run: npx playwright install --with-deps
+
+      - name: Run Playwright tests
+        run: npm test
+        env:
+          BASE_URL: ${{ vars.BASE_URL || 'https://www.saucedemo.com' }}
+          HEADLESS: true
+          CI: true
+
 name: Playwright Tests
 
 on:
