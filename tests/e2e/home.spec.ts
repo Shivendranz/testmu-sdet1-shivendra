@@ -6,14 +6,15 @@ test.describe('Home Page', () => {
     const homePage = new HomePage(page);
     await homePage.navigate();
 
-    await expect(page).toHaveTitle(/Playwright/);
+    await expect(page).toHaveTitle(/Swag Labs/);
   });
 
-  test('should navigate to docs via Get Started', async ({ page }) => {
+  test('should navigate to login when Get Started is clicked', async ({ page }) => {
     const homePage = new HomePage(page);
     await homePage.navigate();
-    await homePage.clickGetStarted();
 
-    await expect(page).toHaveURL(/docs/);
+    // SauceDemo root IS the login page — verify login form is present
+    await expect(page).toHaveURL(/saucedemo\.com/);
+    await expect(page.locator('[data-test="login-button"]')).toBeVisible();
   });
 });

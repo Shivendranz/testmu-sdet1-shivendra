@@ -143,19 +143,19 @@ npm run lint
 
 ---
 
-## Future Vision: What I Would Build Next
+## What I'd Build Next (with More Time)
 
-1. **Self-healing locators** — An agent that inspects failed test DOM snapshots and suggests or auto-applies updated selectors, reducing flaky-test maintenance.
+1. **Option B — Flaky Test Classifier** — Feed full run logs to an LLM after each CI run and output a structured JSON report bucketing failures into: `real_bug`, `environment_issue`, or `flaky_test`. This complements the Failure Explainer (Option A) already built — together they cover both per-test diagnosis and cross-run pattern detection.
 
-2. **Natural-language test authoring** — A CLI or web UI where QA engineers describe scenarios in plain English; the `TestGeneratorAgent` produces runnable Playwright specs with POM bindings.
+2. **Self-healing locators** — When a test fails on a missing selector, automatically send the current DOM snapshot to the LLM and get back a suggested replacement selector. The `TestGeneratorAgent` in `agents/` is already wired for this — it needs a DOM-diff prompt and an auto-apply step.
 
-3. **Visual regression layer** — Integrate Playwright's screenshot comparison with an AI vision agent to classify intentional vs. accidental UI diffs.
+3. **Natural-language test authoring** — A CLI that takes a plain-English scenario (e.g. "user resets password then logs in") and produces a runnable Playwright spec with POM bindings via the `TestGeneratorAgent`.
 
-4. **Test data factory** — Faker-driven data builders in `utils/` with API seeding via `api-clients/` for isolated, parallel-safe test environments.
+4. **Visual regression with AI diff classification** — Integrate Playwright's screenshot comparison with an AI vision agent to classify UI diffs as intentional (design change) vs. accidental (regression). Cuts false positives from pixel-diff tools.
 
-5. **LambdaTest / TestMu cloud grid** — Wire `playwright.config.ts` to run against a cloud browser grid for cross-browser matrix at scale, with trace and video artifacts pushed to CI.
+5. **Test data factory** — Faker-driven builders in `utils/` with API seeding via `api-clients/` for isolated, parallel-safe test state. Eliminates shared state bugs between parallel workers.
 
-6. **Observability dashboard** — Aggregate JUnit + HTML reports into a single pass/fail trend dashboard with flake detection and mean-time-to-recovery metrics.
+6. **Cloud grid + observability** — Wire `playwright.config.ts` to a cloud browser grid (LambdaTest / BrowserStack) and aggregate JUnit + HTML reports into a flake-detection dashboard with MTTR metrics.
 
 ---
 

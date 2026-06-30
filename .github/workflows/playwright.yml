@@ -30,7 +30,7 @@ jobs:
       - name: Run Playwright tests
         run: npm test
         env:
-          BASE_URL: ${{ vars.BASE_URL || 'https://playwright.dev' }}
+          BASE_URL: ${{ vars.BASE_URL || 'https://www.saucedemo.com' }}
           HEADLESS: true
           CI: true
 
