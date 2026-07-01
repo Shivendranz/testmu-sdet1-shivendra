@@ -27,22 +27,23 @@ test.describe('Dashboard Module — Permission-based Visibility', () => {
         '<div data-test="admin-panel" data-role="admin">Admin Controls</div></body>',
       );
 
-      // IMPORTANT: response.text() already decompresses the body, but the
-      // original response headers (content-encoding, content-length) are
-      // still attached to `response`. If we pass them through unchanged via
-      // { response, body }, the browser tries to gunzip/brotli-decode a body
-      // that is no longer compressed and silently fails to render it — the
-      // injected <div> never appears, even though route.fulfill() reports
-      // no error. This only surfaces when the origin actually compresses
-      // responses (common in CI/hosted environments, often absent when
-      // hitting a local dev server), which is why this passed locally but
-      // failed in GitHub Actions CI. Stripping these two headers forces the
-      // browser to treat the body as plain, uncompressed HTML.
-      const headers = { ...response.headers() };
-      delete headers['content-encoding'];
-      delete headers['content-length'];
-
-      await route.fulfill({ response, body, headers });
+      // IMPORTANT: we deliberately do NOT pass `{ response }` (which reuses
+      // the original response's headers) here. response.text() already
+      // decompresses the body, so any leftover content-encoding/
+      // content-length/transfer-encoding headers from the original response
+      // describe bytes that no longer match what we're sending. Chromium and
+      // WebKit are lenient and tolerate this, but Firefox enforces header/
+      // body consistency more strictly and silently drops or truncates the
+      // fulfilled body when these headers are stale — which is why this
+      // test passed in Chromium/WebKit but kept failing only in Firefox.
+      // Building a fresh, minimal header set (instead of spreading the
+      // original response's headers) avoids this entirely and is
+      // consistent across all three engines.
+      await route.fulfill({
+        status: 200,
+        contentType: 'text/html',
+        body,
+      });
     });
 
     const dashboard = new DashboardPage(page);
