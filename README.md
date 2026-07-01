@@ -184,6 +184,29 @@ npm run lint
 
 ---
 
+## AI Integration in Action — A Real Example
+
+While building this framework, the `admin user should see admin-only controls
+when mocked` test failed in CI (GitHub Actions), even though it passed
+locally. The LLM Failure Explainer (Task 3, Option A — `hooks/llm-reporter.ts`)
+automatically caught the failure and generated a plain-English diagnosis,
+saved to `test-results/llm-explanations/`.
+
+Investigating from there, the root cause turned out to be a classic
+`route.fetch()` gotcha: the original response was gzip-compressed, and after
+rewriting the HTML body the `content-encoding` / `content-length` headers
+were still being passed through unchanged in `route.fulfill()`. The browser
+tried to decompress an already-uncompressed body and silently failed to
+render the injected element — present only where the origin actually
+compresses responses (CI), not always reproducible locally. The fix strips
+those two headers before fulfilling the mocked response
+(`tests/e2e/dashboard/dashboard.permissions.spec.ts`).
+
+This is included here as evidence the AI integration works end-to-end against
+a genuine CI failure, not a synthetic demo.
+
+---
+
 ## What I'd Build Next (with More Time)
 
 1. **Option B — Flaky Test Classifier** — Feed full run logs to an LLM after each CI run and output a structured JSON report bucketing failures into: `real_bug`, `environment_issue`, or `flaky_test`. This complements the Failure Explainer (Option A) already built — together they cover both per-test diagnosis and cross-run pattern detection.
