@@ -1,6 +1,10 @@
 import { test, expect } from '@playwright/test';
+import http from 'http';
+import { AddressInfo } from 'net';
+import { AuthApiClient } from '../../api-clients/auth-api-client';
 import { assertSchema } from '../../utils/schema-validator';
 import { authTokenSchema } from '../../api-clients/schemas/user.schema';
+import type { AuthTokenResponse } from '../../api-clients/schemas/user.schema';
 import { env } from '../../utils/env';
 
 /**
@@ -10,32 +14,32 @@ import { env } from '../../utils/env';
 test.describe('REST API — Auth Token Validation', () => {
   const LOGIN_URL = `${env.apiBaseUrl}/login`;
 
-  test('should return a valid token for correct credentials', async ({ page }) => {
-    await page.goto('about:blank');
-    await page.route(`**${LOGIN_URL}**`, (route) =>
-      route.fulfill({
-        status: 200,
-        contentType: 'application/json',
-        body: JSON.stringify({ token: 'QpwL5tpe83ilfN2' }),
-      }),
-    );
+  test('should return a valid token for correct credentials', async ({ request }) => {
+    const server = http.createServer((req, res) => {
+      if (req.url === '/login') {
+        res.writeHead(200, { 'content-type': 'application/json' });
+        res.end(JSON.stringify({ token: 'QpwL5tpe83ilfN2' }));
+        return;
+      }
 
-    const result = await page.evaluate(
-      async ({ url, email, password }: { url: string; email: string; password: string }) => {
-        const res = await fetch(url, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ email, password }),
-        });
-        const body = await res.json();
-        return { status: res.status, body };
-      },
-      { url: LOGIN_URL, email: env.apiUserEmail, password: env.apiUserPassword },
-    );
+      res.writeHead(404, { 'content-type': 'application/json' });
+      res.end(JSON.stringify({ error: 'Not found' }));
+    });
 
-    expect(result.status).toBe(200);
-    expect(result.body.token).toBeTruthy();
-    assertSchema(authTokenSchema, result.body);
+    await new Promise<void>((resolve) => server.listen(0, '127.0.0.1', () => resolve()));
+    const { port } = server.address() as AddressInfo;
+    const baseUrl = `http://127.0.0.1:${port}`;
+
+    try {
+      const client = new AuthApiClient(request, baseUrl);
+      const response = await client.login({ email: env.apiUserEmail, password: env.apiUserPassword });
+      expect(response.ok()).toBeTruthy();
+      const body = await response.json();
+      expect(body.token).toBeTruthy();
+      assertSchema<AuthTokenResponse>(authTokenSchema, body);
+    } finally {
+      await new Promise<void>((resolve, reject) => server.close((error) => (error ? reject(error) : resolve())));
+    }
   });
 
   test('should reject login with missing password', async ({ page }) => {

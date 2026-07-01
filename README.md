@@ -11,27 +11,49 @@ testmu-sdet1-shivendra/
 ├── .github/
 │   └── workflows/
 │       └── playwright.yml      # CI pipeline — install, test, upload artifacts
-├── agents/                     # LLM integration layer (OpenAI SDK)
-│   ├── base-agent.ts           # Abstract agent with chat completion
-│   ├── test-generator.agent.ts # Example: NL scenario → test steps
+├── agents/                     # LLM agent layer (OpenAI SDK) — scaffolding for
+│   ├── base-agent.ts           # Task 3 roadmap items (see "What I'd Build Next");
+│   ├── test-generator.agent.ts # not currently called from any test
 │   └── index.ts
 ├── api-clients/                # HTTP/API abstraction over Playwright request
-│   ├── base-api-client.ts      # Shared GET/POST helpers
-│   ├── example-api-client.ts   # Example health-check client
+│   ├── base-api-client.ts      # Shared GET/POST/PUT/PATCH/DELETE + auth headers
+│   ├── auth-api-client.ts      # Auth-specific client (scaffolding, not yet used by specs)
+│   ├── users-api-client.ts     # Users CRUD client (scaffolding, not yet used by specs)
+│   ├── example-api-client.ts   # Used by tests/api/health.spec.ts
+│   ├── schemas/
+│   │   └── user.schema.ts      # AJV JSON schemas + matching TS interfaces
 │   └── index.ts
+├── hooks/
+│   └── llm-reporter.ts         # Task 3 — LlmFailureExplainerReporter (Option A).
+│                                # Registered as a Playwright reporter in
+│                                # playwright.config.ts, so it runs automatically
+│                                # for every failing test in every spec file/project —
+│                                # no per-spec wiring required.
 ├── pages/                      # Page Object Model (POM)
 │   ├── base.page.ts            # Base class with navigation helpers
-│   ├── home.page.ts            # Example page object
+│   ├── home.page.ts
+│   ├── login/
+│   │   ├── login.page.ts
+│   │   ├── forgot-password.page.ts
+│   │   ├── inventory.page.ts
+│   │   └── index.ts
+│   ├── dashboard/
+│   │   ├── dashboard.page.ts
+│   │   └── index.ts
 │   └── index.ts
 ├── tests/
-│   ├── e2e/                    # Browser-based end-to-end tests
-│   │   └── home.spec.ts
-│   └── api/                    # API-level tests
-│       └── health.spec.ts
+│   ├── e2e/
+│   │   ├── home.spec.ts
+│   │   ├── login/               # happy-path, negative, security, forgot-password, session-expiry
+│   │   └── dashboard/            # widgets, table sort/filter, responsive, permissions
+│   └── api/                      # auth, crud, error-handling, rate-limiting, schema-validation, health
 ├── utils/                      # Shared utilities
 │   ├── env.ts                  # Typed environment config (dotenv)
 │   ├── logger.ts               # Structured console logger
+│   ├── schema-validator.ts     # AJV assertSchema<T>() helper used in API tests
 │   └── index.ts
+├── prompts.md                  # Task 2 — raw prompts + iteration notes per module
+├── ai-usage-log.md             # Every AI tool used, chronologically
 ├── .env.example                # Environment variable template
 ├── .gitignore
 ├── Dockerfile                  # Headless containerized test runner
@@ -53,7 +75,8 @@ This framework follows a **layered, separation-of-concerns** design:
 | **pages/** | Page Object Model — encapsulates UI locators and user actions |
 | **api-clients/** | API layer — typed HTTP clients built on Playwright's `request` fixture |
 | **utils/** | Cross-cutting concerns — env loading, logging, shared helpers |
-| **agents/** | LLM integration — OpenAI-powered agents for test generation, analysis, or self-healing |
+| **hooks/** | Playwright `Reporter` implementations — `llm-reporter.ts` is the Task 3 LLM Failure Explainer, wired suite-wide via `playwright.config.ts` |
+| **agents/** | LLM integration scaffolding — OpenAI-powered agents for future test generation/self-healing work (see roadmap below) |
 
 **Data flow (E2E):** `spec → Page Object → Playwright Page → Browser`
 
@@ -91,7 +114,7 @@ npx playwright install
 
 ```bash
 cp .env.example .env
-# Edit .env with your BASE_URL and OPENAI_API_KEY (for agent features)
+# Edit .env with your BASE_URL and LLM_API_KEY (Groq or OpenAI — see .env.example)
 ```
 
 ### 3. Run tests
@@ -122,6 +145,24 @@ npm run test:debug
 npm run report
 ```
 
+### 4b. View AI failure explanations (Task 3)
+
+Whenever a test fails and `LLM_API_KEY` is set in `.env` (works with Groq or
+OpenAI — see `.env.example`), `hooks/llm-reporter.ts` (registered as a
+Playwright reporter — see `playwright.config.ts`) automatically calls the LLM
+for every failing test, across every spec file and browser project. Each
+explanation is:
+
+- printed to stdout during the run, prefixed with `🔍 [LLM Explainer]`
+- written as a Markdown file to `test-results/llm-explanations/<test-title>.md`
+
+```bash
+cat test-results/llm-explanations/*.md
+```
+
+If `LLM_API_KEY` is missing or the account has no quota, the reporter logs a
+warning and skips the call without failing the test run.
+
 ### 5. Run in Docker (headless)
 
 ```bash
@@ -147,7 +188,7 @@ npm run lint
 
 1. **Option B — Flaky Test Classifier** — Feed full run logs to an LLM after each CI run and output a structured JSON report bucketing failures into: `real_bug`, `environment_issue`, or `flaky_test`. This complements the Failure Explainer (Option A) already built — together they cover both per-test diagnosis and cross-run pattern detection.
 
-2. **Self-healing locators** — When a test fails on a missing selector, automatically send the current DOM snapshot to the LLM and get back a suggested replacement selector. The `TestGeneratorAgent` in `agents/` is already wired for this — it needs a DOM-diff prompt and an auto-apply step.
+2. **Self-healing locators** — When a test fails on a missing selector, automatically send the current DOM snapshot to the LLM and get back a suggested replacement selector. `agents/base-agent.ts` already wraps the OpenAI SDK for this kind of call; it isn't invoked by any test yet — next step is a DOM-diff prompt in `TestGeneratorAgent` and an auto-apply step.
 
 3. **Natural-language test authoring** — A CLI that takes a plain-English scenario (e.g. "user resets password then logs in") and produces a runnable Playwright spec with POM bindings via the `TestGeneratorAgent`.
 

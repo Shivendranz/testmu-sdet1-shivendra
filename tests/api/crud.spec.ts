@@ -1,6 +1,7 @@
 import { test, expect } from '@playwright/test';
 import { assertSchema } from '../../utils/schema-validator';
 import { userListSchema, userSchema, createdUserSchema } from '../../api-clients/schemas/user.schema';
+import type { UserListResponse, SingleUserResponse, CreatedUserResponse } from '../../api-clients/schemas/user.schema';
 import { env } from '../../utils/env';
 
 /**
@@ -35,7 +36,7 @@ test.describe('REST API — CRUD Lifecycle', () => {
     );
 
     expect(result.status).toBe(201);
-    assertSchema(createdUserSchema, result.body);
+    assertSchema<CreatedUserResponse>(createdUserSchema, result.body);
     expect(result.body.name).toBe(newUser.name);
     expect(result.body.job).toBe(newUser.job);
   });
@@ -56,7 +57,7 @@ test.describe('REST API — CRUD Lifecycle', () => {
     );
 
     expect(result.status).toBe(200);
-    assertSchema(userListSchema, result.body);
+    assertSchema<UserListResponse>(userListSchema, result.body);
     expect(result.body.data.length).toBeGreaterThan(0);
   });
 
@@ -75,7 +76,7 @@ test.describe('REST API — CRUD Lifecycle', () => {
     );
 
     expect(result.status).toBe(200);
-    assertSchema(userSchema, result.body);
+    assertSchema<SingleUserResponse>(userSchema, result.body);
     expect(result.body.data.id).toBe(2);
   });
 

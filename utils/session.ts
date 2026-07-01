@@ -1,5 +1,4 @@
-import { Page } from '@playwright/test';
-// Sirf ek '..' (parent directory) ka use karein
+import { expect, Page } from '@playwright/test';
 import { LoginPage } from '../pages/login/login.page';
 import { InventoryPage } from '../pages/login/inventory.page';
 import { env } from './env';
@@ -8,10 +7,14 @@ import { env } from './env';
 export async function loginAsStandardUser(page: Page): Promise<InventoryPage> {
   const loginPage = new LoginPage(page);
   await loginPage.navigate();
+  await expect(loginPage.usernameInput).toBeVisible();
+  await expect(loginPage.passwordInput).toBeVisible();
   await loginPage.login(env.loginUser, env.loginPassword);
 
   const inventory = new InventoryPage(page);
-  await page.waitForURL(/inventory/);
+  await expect(page).toHaveURL(/inventory/);
+  await expect(inventory.pageTitle).toBeVisible();
+  await expect(inventory.inventoryItems.first()).toBeVisible();
   return inventory;
 }
 

@@ -1,15 +1,8 @@
 import { test, expect } from '@playwright/test';
 import { LoginPage } from '../../../pages/login/login.page';
 import { env } from '../../../utils/env';
-import { explainFailure } from '../../../hooks/llm-reporter'; // Hook imported here
 
 test.describe('Login Module — Invalid Credentials (Negative)', () => {
-  
-  // Task 3: Automatically triggers the LLM Explainer if any test in this block fails
-  test.afterEach(async ({}, testInfo) => {
-    await explainFailure(testInfo);
-  });
-
   test('should show error for wrong password', async ({ page }) => {
     const loginPage = new LoginPage(page);
     await loginPage.navigate();

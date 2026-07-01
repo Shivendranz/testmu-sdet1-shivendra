@@ -1,3 +1,34 @@
+export interface User {
+  id: number;
+  email: string;
+  first_name: string;
+  last_name: string;
+  avatar: string;
+}
+
+export interface UserListResponse {
+  page: number;
+  per_page: number;
+  total: number;
+  total_pages: number;
+  data: User[];
+}
+
+export interface SingleUserResponse {
+  data: User;
+}
+
+export interface CreatedUserResponse {
+  name: string;
+  job: string;
+  id: string;
+  createdAt: string;
+}
+
+export interface AuthTokenResponse {
+  token: string;
+}
+
 export const userListSchema = {
   type: 'object',
   required: ['page', 'per_page', 'total', 'total_pages', 'data'],

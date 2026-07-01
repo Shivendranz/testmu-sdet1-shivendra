@@ -10,9 +10,11 @@ test.describe('Dashboard Module — Table Sorting & Filtering', () => {
   test('should sort widgets A to Z', async ({ page }) => {
     const dashboard = new DashboardPage(page);
     await dashboard.navigate();
+    await dashboard.waitForWidgetsLoaded();
     await dashboard.sortBy('az');
 
     const titles = await dashboard.getWidgetTitles();
+    expect(titles.length).toBeGreaterThan(0);
     const sorted = [...titles].sort((a, b) => a.localeCompare(b));
     expect(titles).toEqual(sorted);
   });
@@ -20,9 +22,11 @@ test.describe('Dashboard Module — Table Sorting & Filtering', () => {
   test('should sort widgets Z to A', async ({ page }) => {
     const dashboard = new DashboardPage(page);
     await dashboard.navigate();
+    await dashboard.waitForWidgetsLoaded();
     await dashboard.sortBy('za');
 
     const titles = await dashboard.getWidgetTitles();
+    expect(titles.length).toBeGreaterThan(0);
     const sorted = [...titles].sort((a, b) => b.localeCompare(a));
     expect(titles).toEqual(sorted);
   });
@@ -30,6 +34,7 @@ test.describe('Dashboard Module — Table Sorting & Filtering', () => {
   test('should filter widgets by name via search', async ({ page }) => {
     const dashboard = new DashboardPage(page);
     await dashboard.navigate();
+    await dashboard.waitForWidgetsLoaded();
 
     const allTitles = await dashboard.getWidgetTitles();
     const target = allTitles[0];

@@ -13,17 +13,17 @@ export interface AgentResponse {
 }
 
 /**
- * Base LLM agent — extend to build test-generation, self-healing, or analysis agents.
+ * Base LLM agent â€” extend to build test-generation, self-healing, or analysis agents.
  */
 export abstract class BaseAgent {
   protected readonly client: OpenAI;
   protected readonly model: string;
 
-  constructor(model = env.openaiModel) {
-    if (!env.openaiApiKey) {
-      throw new Error('OPENAI_API_KEY is required for agent operations');
+  constructor(model = env.llmModel) {
+    if (!env.llmApiKey) {
+      throw new Error('LLM_API_KEY (or OPENAI_API_KEY) is required for agent operations');
     }
-    this.client = new OpenAI({ apiKey: env.openaiApiKey });
+    this.client = new OpenAI({ apiKey: env.llmApiKey, baseURL: env.llmBaseUrl });
     this.model = model;
   }
 

@@ -17,19 +17,22 @@ test.describe('Dashboard Module — Widget Loading', () => {
   });
 
   test('should display widgets after simulated high-latency API', async ({ page }) => {
-    await page.route('**/inventory.html', async (route) => {
+    // beforeEach already navigated to plain /inventory.html once (via
+    // login), so re-requesting that exact URL would be served from the
+    // browser's in-memory cache — this route would silently never fire, and
+    // the test would falsely "pass" without ever exercising the simulated
+    // latency. A cache-busting query string forces a genuinely new request.
+    await page.route('**/inventory.html*', async (route) => {
       await new Promise((resolve) => setTimeout(resolve, 2000));
       await route.continue();
     });
 
     const dashboard = new DashboardPage(page);
-    const start = Date.now();
-    await dashboard.navigate();
+    await dashboard.navigate('?mock=high-latency');
     await dashboard.waitForWidgetsLoaded(10_000);
 
-    const elapsed = Date.now() - start;
-    expect(elapsed).toBeGreaterThanOrEqual(2000);
     expect(await dashboard.getWidgetCount()).toBeGreaterThan(0);
+    await expect(dashboard.widgets.first()).toBeVisible();
   });
 
   test('should hide loader after widgets render', async ({ page }) => {

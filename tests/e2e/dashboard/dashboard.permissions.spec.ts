@@ -1,24 +1,25 @@
 import { test, expect } from '@playwright/test';
 import { DashboardPage } from '../../../pages/dashboard/dashboard.page';
-import { LoginPage } from '../../../pages/login/login.page';
-import { env } from '../../../utils/env';
+import { loginAsStandardUser } from '../../../utils/session';
 
 test.describe('Dashboard Module — Permission-based Visibility', () => {
-  test('standard user should see user panel but not admin panel', async ({ page }) => {
-    const loginPage = new LoginPage(page);
-    await loginPage.navigate();
-    await loginPage.login(env.loginUser, env.loginPassword);
+  test.beforeEach(async ({ page }) => {
+    await loginAsStandardUser(page);
+  });
 
+  test('standard user should see user panel but not admin panel', async ({ page }) => {
     const dashboard = new DashboardPage(page);
     await dashboard.navigate();
     await dashboard.waitForWidgetsLoaded();
 
-    expect(await dashboard.isUserPanelVisible()).toBeTruthy();
-    expect(await dashboard.isAdminPanelVisible()).toBeFalsy();
+    await expect(dashboard.userPanel).toBeVisible();
+    await expect(dashboard.adminPanel).toHaveCount(0);
   });
 
   test('admin user should see admin-only controls when mocked', async ({ page }) => {
-    await page.route('**/inventory.html', async (route) => {
+    // Route pattern uses a trailing * to also match the cache-busting query
+    // string appended below.
+    await page.route('**/inventory.html*', async (route) => {
       const response = await route.fetch();
       let body = await response.text();
       body = body.replace(
@@ -28,26 +29,25 @@ test.describe('Dashboard Module — Permission-based Visibility', () => {
       await route.fulfill({ response, body });
     });
 
-    const loginPage = new LoginPage(page);
-    await loginPage.navigate();
-    await loginPage.login(env.loginUser, env.loginPassword);
-
     const dashboard = new DashboardPage(page);
-    await dashboard.navigate();
+    // beforeEach's loginAsStandardUser() already navigated to plain
+    // /inventory.html once. Re-requesting that exact URL would be served
+    // from the browser's in-memory cache, which never reaches Playwright's
+    // network interception layer — page.route() would silently never fire,
+    // and the mocked admin panel would never appear. A cache-busting query
+    // string forces a genuinely new network request every time.
+    await dashboard.navigate('?mock=admin-panel');
+    await dashboard.waitForWidgetsLoaded();
 
     await expect(dashboard.adminPanel).toBeVisible();
     await expect(dashboard.adminPanel).toContainText('Admin Controls');
   });
 
   test('user role should not expose admin API endpoints in DOM', async ({ page }) => {
-    const loginPage = new LoginPage(page);
-    await loginPage.navigate();
-    await loginPage.login(env.loginUser, env.loginPassword);
-
     const dashboard = new DashboardPage(page);
     await dashboard.navigate();
+    await dashboard.waitForWidgetsLoaded();
 
-    const adminElements = await page.locator('[data-role="admin"]').count();
-    expect(adminElements).toBe(0);
+    await expect(page.locator('[data-role="admin"]')).toHaveCount(0);
   });
 });

@@ -29,8 +29,8 @@ export class DashboardPage extends BasePage {
     this.mobileMenuButton = page.locator('#react-burger-menu-btn');
   }
 
-  async navigate(): Promise<void> {
-    await this.goto('/inventory.html');
+  async navigate(queryString = ''): Promise<void> {
+    await this.goto(`/inventory.html${queryString}`);
     await this.waitForPageLoad();
   }
 
@@ -53,6 +53,7 @@ export class DashboardPage extends BasePage {
       lohi: 'Price (low to high)',
       hilo: 'Price (high to low)',
     };
+    await this.sortDropdown.waitFor({ state: 'visible', timeout: 10_000 });
     await this.sortDropdown.selectOption({ label: labels[option] });
   }
 
