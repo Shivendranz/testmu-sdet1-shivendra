@@ -17,9 +17,9 @@ test.describe('Dashboard Module — Permission-based Visibility', () => {
   });
 
   test('admin user should see admin-only controls when mocked', async ({ page }) => {
-    // FIX: String pattern '**/inventory.html*' ki jagah Regex use kiya hai
-    // Taaki 'mock=admin-panel' aate hi interceptor har haal me trigger ho jaye
-    await page.route(/.*mock=admin-panel.*/, async (route) => {
+    // Route pattern uses a trailing * to also match the cache-busting query
+    // string appended below.
+    await page.route('**/inventory.html*', async (route) => {
       const response = await route.fetch();
       let body = await response.text();
       body = body.replace(
