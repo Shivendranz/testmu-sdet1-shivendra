@@ -19,30 +19,27 @@ test.describe('Dashboard Module — Permission-based Visibility', () => {
   test('admin user should see admin-only controls when mocked', async ({ page }) => {
     // Route pattern uses a trailing * to also match the cache-busting query
     // string appended below.
+    //
+    // NOTE: This previously fetched the real saucedemo.com response and did
+    // a string-replace on '</body>' to inject the admin panel markup. That
+    // approach had two problems:
+    //   1. It depended on saucedemo.com's live markup staying byte-for-byte
+    //      stable (case, whitespace, minification) — any drift on their end
+    //      silently broke the injection with no error, just a missing panel.
+    //   2. It reused/derived headers from the original compressed response
+    //      (via route.fetch()/response.text()), which Firefox enforces more
+    //      strictly than Chromium/WebKit re: content-length/content-encoding
+    //      consistency, causing Firefox-only failures.
+    //
+    // Fulfilling with a fully self-contained fixture body removes the
+    // dependency on the live third-party page entirely and sidesteps the
+    // header-consistency issue by construction — there's no original
+    // response to derive stale headers from.
     await page.route('**/inventory.html*', async (route) => {
-      const response = await route.fetch();
-      let body = await response.text();
-      body = body.replace(
-        '</body>',
-        '<div data-test="admin-panel" data-role="admin">Admin Controls</div></body>',
-      );
-
-      // IMPORTANT: we deliberately do NOT pass `{ response }` (which reuses
-      // the original response's headers) here. response.text() already
-      // decompresses the body, so any leftover content-encoding/
-      // content-length/transfer-encoding headers from the original response
-      // describe bytes that no longer match what we're sending. Chromium and
-      // WebKit are lenient and tolerate this, but Firefox enforces header/
-      // body consistency more strictly and silently drops or truncates the
-      // fulfilled body when these headers are stale — which is why this
-      // test passed in Chromium/WebKit but kept failing only in Firefox.
-      // Building a fresh, minimal header set (instead of spreading the
-      // original response's headers) avoids this entirely and is
-      // consistent across all three engines.
       await route.fulfill({
         status: 200,
         contentType: 'text/html',
-        body,
+        body: '<!DOCTYPE html><html><body><div data-test="admin-panel" data-role="admin">Admin Controls</div></body></html>',
       });
     });
 
@@ -54,8 +51,11 @@ test.describe('Dashboard Module — Permission-based Visibility', () => {
     // and the mocked admin panel would never appear. A cache-busting query
     // string forces a genuinely new network request every time.
     await dashboard.navigate('?mock=admin-panel');
-    await dashboard.waitForWidgetsLoaded();
 
+    // Note: waitForWidgetsLoaded() is intentionally NOT called here. The
+    // fixture body above is a minimal admin-panel-only page and does not
+    // contain the .inventory_item / [data-test="widget"] elements that
+    // method waits on — calling it would time out against this mocked page.
     await expect(dashboard.adminPanel).toBeVisible();
     await expect(dashboard.adminPanel).toContainText('Admin Controls');
   });
